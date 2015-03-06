@@ -11,7 +11,7 @@ int main( int argc, char **argv )
       	{
         	break ;
       	}
-      	printf("%c", c);
+      	fputc(c, stdout);
    	}
    	while(1);
 
