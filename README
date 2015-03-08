@@ -1,0 +1,65 @@
+Assignment 1 / Milestone 1
+==========================
+
+### Building executables on Linux:
+
+    1.- Make sure the system has the 'gcc compiler' and 'make'.
+    
+    2.- From the Linux terminal execute the following commands:
+        $ cd assignment1
+        $ make
+
+### Running the programs:
+
+    hello:
+    ------
+    1.- $ ./hello
+
+    cat:
+    ---
+    1.- $ ./cat
+    2.- Introduce data using the keyboard and press ENTER.
+    3.- Program displays data read from stdin.
+    4.- Control D to exit.
+
+### Test report (cat)
+    Test included various data inputs sent from the command line and its execution was
+    followed using the GNU gdb tool (Break points: lines 10, 15, 16, 21 ).
+
+    Introducing random data as shown below the result was successful:
+    
+    I: ^H
+    O: ^H
+    I: ^G
+    O: ^G
+    I: sdaf
+    O: sdaf
+    I: 4543v
+    O: 4543v
+    I: ,m.nm,l
+    O: ,m.nm,l
+    I: /;'jjkj
+    O: /;'jjkj
+    I: teye
+    O: teye
+    I: !@#~$%^&*
+    O: !@#~$%^&*
+    I: +_":"L:"L?>"D\
+    O: +_":"L:"L?>"D\
+    I: \n
+    O: \n
+    I: 
+    O: 
+    I: \
+    I: \
+
+    Testing key combinations:
+    
+    Ctrl + C: Sends an interrupt signal (The program stops execution).
+    ENTER   : Application prints data introduced from the prompt.    
+    Ctrl + D: Sends an EOF (If some characters where introduced before "Ctrl + D",
+              the application behaves as if an ENTER had been introduced but without
+              a break line at the end.)
+    Other   : If the key combination results in a standard character the program 
+              behaves as expected. In some cases, strange characters gave empty
+              results but without breaking the application.
