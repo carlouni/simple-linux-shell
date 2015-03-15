@@ -50,14 +50,8 @@ void execcat(char **argv)
     FILE *file;
     file = stdin;
     char *fname = "stdin";
-    char *errFile = "cat: ";
-   // bool fflag = true;
-    
-    // First parameter is the program
-    //*argv++;
     
     do {
-        //rFile = 1;
         if (*argv) {
             if (!strcmp(*argv, "-"))
                 file = stdin;
@@ -68,16 +62,13 @@ void execcat(char **argv)
             }
             fname = *argv++;
         }
-        scanfile(file);
-/*
-        if (rFile == 1) {
-            printf("File name: %s \n", fname);
-        }
-*/
         
-        //cook_buf(fp);
-       // if (fp != stdin)
-          //  (void)fclose(fp);
+        /* If file check is successful. file scanning starts */
+        scanfile(file);
+
+        if (file != stdin)
+            (void)fclose(file);
+        
     } while (*argv);
 }
 
@@ -97,7 +88,6 @@ void scanfile(FILE *file)
             fputc('$', stdout);
         }
         fputc(ch, stdout);
-        //printf("%c",ch);
         prev = ch;
     }
    fclose(file);
