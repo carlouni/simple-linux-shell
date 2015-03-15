@@ -13,9 +13,15 @@ Assignment 1
 
     cat:
     ---
-    1.- $ ./cat
-    2.- Introduce data using the keyboard and press ENTER.
-    3.- Program displays data read from stdin.
+    1.- $ ./cat [OPTION]... [FILE]...
+    2.- The options available are as follows:
+        -n : prints line number on the left side
+        -E : prints '$' at the end of each line
+
+    Input entered from stdin:
+    1.- If no file is introduced, the data input is taken from the stdin.
+    3.- Program displays data read from stdin and display results based on the
+        above options.
     4.- Control D to exit.
 
     hello:
