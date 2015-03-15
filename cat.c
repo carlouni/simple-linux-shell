@@ -90,5 +90,4 @@ void scanfile(FILE *file)
         fputc(ch, stdout);
         prev = ch;
     }
-   fclose(file);
 }
