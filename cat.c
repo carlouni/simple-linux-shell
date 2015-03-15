@@ -2,9 +2,12 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <string.h>
-#include <error.h>
+#include <errno.h>
 
+/* to be used for error handling when reading files */
+extern int errno ;
 
+/* function declarations */
 void execcat(char **argv);
 void scanfile(FILE *file);
 
@@ -42,49 +45,63 @@ int main( int argc, char **argv )
     /* execute cat */
     execcat(argv);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
+/**
+ * Identifies file or files to be scanned. After a file is identified, it scans
+ * the file by calling the function scanfile.
+ * @param argv
+ */
 void execcat(char **argv)
 {
     FILE *file;
     file = stdin;
-    char *fname = "stdin";
     
     do {
         if (*argv) {
-            if (!strcmp(*argv, "-"))
+            if (!strcmp(*argv, "-")) {
+                /* stdin is handle as a normal file */
                 file = stdin;
+            }
             else if ((file = fopen(*argv, "r")) == NULL) {
-            	fprintf(stderr, "cat: %s: No such file or directory\n", *argv); 
+            	fprintf(stderr, "cat: %s: %s\n", *argv, strerror( errno ));
                 ++argv;
                 continue;
             }
-            fname = *argv++;
+            *argv++;
         }
         
         /* If file check is successful. file scanning starts */
         scanfile(file);
-
+        
+        /* Close file after scanning it */
         if (file != stdin)
             (void)fclose(file);
         
     } while (*argv);
 }
 
+/**
+ * Scans file entered as parameter. It proceeds in the same way when the stdin is
+ * entered as parameter.
+ * @param file
+ */
 void scanfile(FILE *file)
 {
     int ch;
     char prev;
     int count = 1;
     
-    while( ( ch = fgetc(file) ) != EOF ) {
-        if ( nFlag && (prev == '\n' || count == 1) ){
+    while ((ch = fgetc(file)) != EOF) {
+        /* If option n */
+        if (nFlag && (prev == '\n' || count == 1)) {
             fprintf(stdout,"%6d\t",count);
             count++;
         }
         
-        if ( EFlag && ch == '\n'){
+        /* If option E */
+        if (EFlag && ch == '\n') {
             fputc('$', stdout);
         }
         fputc(ch, stdout);
