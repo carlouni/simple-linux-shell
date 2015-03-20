@@ -3,6 +3,7 @@
 #include <getopt.h>
 #include <string.h>
 #include <errno.h>
+#include <ctype.h>
 
 /* to be used for error handling when reading files */
 extern int errno ;
@@ -16,6 +17,7 @@ static int nFlag = 0;
 static int EFlag = 0;
 static int bFlag = 0;
 static int sFlag = 0;
+static int vFlag = 0;
 
 /**
  * Main function of cat. It accept arguments in the format [options]... [files]...
@@ -28,7 +30,7 @@ int main( int argc, char **argv )
     int ch;
     
     /* Parsing options entered from terminal*/
-    while ((ch = getopt(argc, argv, "nEbs")) != -1) {
+    while ((ch = getopt(argc, argv, "nEbsv")) != -1) {
         
         /* Setting up option flags*/
         switch (ch) {
@@ -45,6 +47,9 @@ int main( int argc, char **argv )
                 break;
             case 's':
                 sFlag = 1;
+                break;
+            case 'v':
+                vFlag = 1;
                 break;
         }
     }
@@ -132,6 +137,19 @@ void scanfile(FILE *file)
         if (EFlag && ch == '\n') {
             fputc('$', stdout);
         }
+        
+        /* if option v */
+        if (vFlag) {
+            if (!isascii(ch)) {
+                ch = (ch) & 0x7f;
+            }
+            if (iscntrl(ch) && ch != '\n' && ch != '\t') {
+                fputc('^', stdout);
+                fputc(ch == '\177' ? '?' : ch | 0100, stdout); 
+                continue;
+            } 
+        }
+        
         fputc(ch, stdout);
         prev = ch;
     }
