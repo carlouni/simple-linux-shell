@@ -14,6 +14,7 @@ void scanfile(FILE *file);
 /* Flags to capture options entered from the terminal */
 static int nFlag = 0;
 static int EFlag = 0;
+static int bFlag = 0;
 
 /**
  * Main function of cat. It accept arguments in the format [options]... [files]...
@@ -26,7 +27,7 @@ int main( int argc, char **argv )
     int ch;
     
     /* Parsing options entered from terminal*/
-    while ((ch = getopt(argc, argv, "nE")) != -1) {
+    while ((ch = getopt(argc, argv, "nEb")) != -1) {
         
         /* Setting up option flags*/
         switch (ch) {
@@ -35,6 +36,11 @@ int main( int argc, char **argv )
                 break;
             case 'E':
                 EFlag = 1;
+                break;
+            case 'b':
+                bFlag = 1;
+                // b is special case of n, so nFlag should be activated
+                nFlag = 1;
                 break;
         }
     }
@@ -94,8 +100,12 @@ void scanfile(FILE *file)
     int count = 1;
     
     while ((ch = fgetc(file)) != EOF) {
-        /* If option n */
-        if (nFlag && (prev == '\n' || count == 1)) {
+        
+        /* 
+         * Number is printed if n is activated. However, if b is activated it
+         * only prints if non-black line is found.
+         */
+        if ((nFlag && (prev == '\n' || count == 1)) && (!bFlag || ch != '\n')) {
             fprintf(stdout,"%6d\t",count);
             count++;
         }
