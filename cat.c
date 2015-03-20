@@ -15,6 +15,7 @@ void scanfile(FILE *file);
 static int nFlag = 0;
 static int EFlag = 0;
 static int bFlag = 0;
+static int sFlag = 0;
 
 /**
  * Main function of cat. It accept arguments in the format [options]... [files]...
@@ -27,7 +28,7 @@ int main( int argc, char **argv )
     int ch;
     
     /* Parsing options entered from terminal*/
-    while ((ch = getopt(argc, argv, "nEb")) != -1) {
+    while ((ch = getopt(argc, argv, "nEbs")) != -1) {
         
         /* Setting up option flags*/
         switch (ch) {
@@ -41,6 +42,9 @@ int main( int argc, char **argv )
                 bFlag = 1;
                 // b is special case of n, so nFlag should be activated
                 nFlag = 1;
+                break;
+            case 's':
+                sFlag = 1;
                 break;
         }
     }
@@ -98,12 +102,26 @@ void scanfile(FILE *file)
     int ch;
     char prev;
     int count = 1;
+    int blkPrinted = 0;
     
     while ((ch = fgetc(file)) != EOF) {
+                
+        /*
+         * If 's' is activated and if it has already printed a blank line it
+         * continues to next loop iteration.
+         */
+        if (sFlag && prev == '\n' && ch == '\n') {
+            if (blkPrinted) {
+                continue;
+            }
+            blkPrinted = 1;
+        } else if (sFlag && prev == '\n' && ch != '\n') {
+            blkPrinted = 0;
+        }
         
         /* 
          * Number is printed if n is activated. However, if b is activated it
-         * only prints if non-black line is found.
+         * only prints if non-blank line is found.
          */
         if ((nFlag && (prev == '\n' || count == 1)) && (!bFlag || ch != '\n')) {
             fprintf(stdout,"%6d\t",count);
