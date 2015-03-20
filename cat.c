@@ -16,7 +16,7 @@ static int nFlag = 0;
 static int EFlag = 0;
 
 /**
- * Reads input from stdin and prints it in stdout.
+ * Main function of cat. It accept arguments in the format [options]... [files]...
  * @param argc
  * @param argv
  * @return int
