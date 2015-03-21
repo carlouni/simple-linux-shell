@@ -31,7 +31,7 @@ int main( int argc, char **argv )
     int ch;
     
     /* Parsing options entered from terminal*/
-    while ((ch = getopt(argc, argv, "nEbsvt")) != -1) {
+    while ((ch = getopt(argc, argv, "nEbsvte")) != -1) {
         
         /* Setting up option flags*/
         switch (ch) {
@@ -43,7 +43,7 @@ int main( int argc, char **argv )
                 break;
             case 'b':
                 bFlag = 1;
-                // b is special case of n, so nFlag should be activated
+                // b is special case of n, thus nFlag should be activated
                 nFlag = 1;
                 break;
             case 's':
@@ -56,6 +56,11 @@ int main( int argc, char **argv )
                 tFlag = 1;
                 // t does what v does except for the TAB character
                 vFlag =1;
+                break;
+            case 'e':
+                // Combines effects of E and v thus it just activates the E and v flags.
+                EFlag = 1;
+                vFlag = 1;
                 break;
         }
     }
@@ -110,7 +115,7 @@ void execcat(char **argv)
  */
 void scanfile(FILE *file)
 {
-    int ch;
+    char ch;
     char prev;
     int count = 1;
     int blkPrinted = 0;
