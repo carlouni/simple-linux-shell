@@ -18,6 +18,7 @@ static int EFlag = 0;
 static int bFlag = 0;
 static int sFlag = 0;
 static int vFlag = 0;
+static int tFlag = 0;
 
 /**
  * Main function of cat. It accept arguments in the format [options]... [files]...
@@ -30,7 +31,7 @@ int main( int argc, char **argv )
     int ch;
     
     /* Parsing options entered from terminal*/
-    while ((ch = getopt(argc, argv, "nEbsv")) != -1) {
+    while ((ch = getopt(argc, argv, "nEbsvt")) != -1) {
         
         /* Setting up option flags*/
         switch (ch) {
@@ -50,6 +51,11 @@ int main( int argc, char **argv )
                 break;
             case 'v':
                 vFlag = 1;
+                break;
+            case 't':
+                tFlag = 1;
+                // t does what v does except for the TAB character
+                vFlag =1;
                 break;
         }
     }
@@ -132,24 +138,25 @@ void scanfile(FILE *file)
             fprintf(stdout,"%6d\t",count);
             count++;
         }
-        
+
         /* If option E */
         if (EFlag && ch == '\n') {
             fputc('$', stdout);
         }
-        
-        /* if option v */
+
+        /* If option v. This is also activated in option t */
         if (vFlag) {
             if (!isascii(ch)) {
                 ch = (ch) & 0x7f;
             }
-            if (iscntrl(ch) && ch != '\n' && ch != '\t') {
+
+            /* If tFlag activated and ch == TAB, it prints ^I */
+            if (iscntrl(ch) && ch != '\n' && (tFlag || ch != '\t')) {
                 fputc('^', stdout);
                 fputc(ch == '\177' ? '?' : ch | 0100, stdout); 
                 continue;
             } 
         }
-        
         fputc(ch, stdout);
         prev = ch;
     }
