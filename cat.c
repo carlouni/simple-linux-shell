@@ -166,6 +166,14 @@ void scanfile(FILE *file)
 
             /* if non-ascii , it will be considered as a DEL key (177 DEC or 0x7f HEX) */
             if (!isascii(ch)) {
+                
+                /* Fixes differences found when comparing to system's cat */
+                fputc('M', stdout);
+                fputc('-', stdout);
+                
+                /* If error found, it skips the loop */
+                if (errno)
+                    break;
                 ch = (ch) & 0x7f;
             }
 
