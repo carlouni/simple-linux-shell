@@ -194,6 +194,9 @@ void scanfile(FILE *file)
                 /* If error found, it skips the loop */
                 if (errno)
                     break;
+                
+                /* Fix issue: Need to storage previous character for next iteration */
+                prev = ch;
                 continue;
             } 
         }
