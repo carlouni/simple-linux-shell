@@ -19,6 +19,7 @@ static int bFlag = 0;
 static int sFlag = 0;
 static int vFlag = 0;
 static int tFlag = 0;
+const char *currentFile;
 
 /**
  * Main function of cat. It accept arguments in the format [options]... [files]...
@@ -89,11 +90,14 @@ void execcat(char **argv)
             if (!strcmp(*argv, "-")) {
                 /* stdin is handle as a normal file */
                 file = stdin;
-            }
-            else if ((file = fopen(*argv, "r")) == NULL) {
-            	fprintf(stderr, "cat: %s: %s\n", *argv, strerror( errno ));
-                ++argv;
-                continue;
+                currentFile = "stdin";
+            } else { 
+                if ((file = fopen(*argv, "r")) == NULL) {
+                    fprintf(stderr, "cat: %s: %s\n", *argv, strerror( errno ));
+                    ++argv;
+                    continue;
+                }
+                currentFile = *argv;
             }
             *argv++;
         }
@@ -103,8 +107,7 @@ void execcat(char **argv)
         
         /* Close file after scanning it */
         if (file != stdin)
-            (void)fclose(file);
-        
+            (void)fclose(file);       
     } while (*argv);
 }
 
@@ -120,6 +123,8 @@ void scanfile(FILE *file)
     int count = 1;
     int blkPrinted = 0;
     
+    // Initialize errno as this may contain a value different from 0.
+    errno = 0;
     while ((ch = fgetc(file)) != EOF) {
                 
         /*
@@ -127,9 +132,8 @@ void scanfile(FILE *file)
          * continues to next loop iteration.
          */
         if (sFlag && prev == '\n' && ch == '\n') {
-            if (blkPrinted) {
+            if (blkPrinted)
                 continue;
-            }
             blkPrinted = 1;
         } else if (sFlag && prev == '\n' && ch != '\n') {
             blkPrinted = 0;
@@ -141,16 +145,26 @@ void scanfile(FILE *file)
          */
         if ((nFlag && (prev == '\n' || count == 1)) && (!bFlag || ch != '\n')) {
             fprintf(stdout,"%6d\t",count);
+            
+            /* If error found, it skips the loop */
+            if (errno)
+                break;
             count++;
         }
 
         /* If option E */
         if (EFlag && ch == '\n') {
             fputc('$', stdout);
+            
+            /* If error found, it skips the loop */
+            if (errno)
+                break;
         }
 
         /* If option v. This is also activated in option t */
         if (vFlag) {
+
+            /* if non-ascii , it will be considered as a DEL key (177 DEC or 0x7f HEX) */
             if (!isascii(ch)) {
                 ch = (ch) & 0x7f;
             }
@@ -158,11 +172,32 @@ void scanfile(FILE *file)
             /* If tFlag activated and ch == TAB, it prints ^I */
             if (iscntrl(ch) && ch != '\n' && (tFlag || ch != '\t')) {
                 fputc('^', stdout);
-                fputc(ch == '\177' ? '?' : ch | 0100, stdout); 
+                
+                /* If error found, it skips the loop */
+                if (errno)
+                    break;
+
+                /*
+                 * If ch is a ctrl, it moves 64 DEC or 0x40 HEX positions in the
+                 * ASCII table so it prints the corresponding letter (A, B, ...)
+                 */
+                fputc(ch == '\177' ? '?' : ch | 0x40, stdout);
+                
+                /* If error found, it skips the loop */
+                if (errno)
+                    break;
                 continue;
             } 
         }
         fputc(ch, stdout);
+        
+        /* If error found, it skips the loop */
+        if (errno)
+            break;
         prev = ch;
     }
+    
+    /* If error found during scanning loop, prints current file and error description */
+    if (errno)
+        fprintf(stderr, "cat: %s: %s\n", currentFile, strerror( errno ));
 }
