@@ -1,0 +1,191 @@
+### Test report milestone 3 (cat)
+    
+    Comparing outputs from own version of cat and the system's cat
+    --------------------------------------------------------------
+    For testing purposes, the combination of the additional options (-b -s -v -t -e)
+    were added to the script "tests/tester.sh"
+
+    The test compared the results of the system's cat and the own cat as suggested
+    below.
+    
+    cat some_options > system_output
+    ./cat some_options > my_output
+    diff -u system_output my_output
+
+    * To run the test from the command line, execute the following:
+    
+    $ bash tests/tester.sh
+    
+    The tester helped to identify two issues regarding non-printing ascii characters
+    and the TAB key. This issues were successfully fixed.
+    
+    See logs below:
+    
+    Issue #1 (differences found comparing with the system's cat)
+    
+    Comparing: ./cat nEbsve /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file1
+     Result: Differences were found!
+    --- /home/gonzalo/Documents/cprojects/assignment1/tests/system_output       2015-03-21 17:59:22.566026105 
+    +++ /home/gonzalo/Documents/cprojects/assignment1/tests/my_output   2015-03-21 17:59:22.570026105 +1000
+    @@ -151,7 +151,7 @@
+        107     the stacks that can start and stop the Bitnami servers. It is are located$
+        108     in the same installation directory.$
+     $
+    -   109     To start the utility, double click the file named M-bM-^@M-^Xmanager-linuxM-bM-^@M-^Y,$
+    +   109     To start the utility, double click the file named b^@^Xmanager-linuxb^@^Y,$
+        110     'manager-windows' or 'manager-osx' from your file browser.$
+     $
+        111     Alternatively, you can also start and stop the services manually, as explained below.$
+    
+    Issue #2 (differences found comparing with the system's cat)
+
+    Comparing: ./cat nEbsvt /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file3
+     Result: Differences were found!
+    --- /home/gonzalo/Documents/cprojects/assignment1/tests/system_output       2015-03-21 18:22:50.277986071 
+    +++ /home/gonzalo/Documents/cprojects/assignment1/tests/my_output   2015-03-21 18:22:50.281986071 +1000
+    @@ -125,33 +125,33 @@
+        103     EC2=`curl --silent --connect-timeout 1 http://169.254.169.254/latest/meta-data/public-hostname
+        104     if [[ $EC2 != "" ]];$
+        105     then$
+    -   106     ^IIP=`echo $EC2 | sed -rn 's/ec2-(.*?)\.compute.*/\1/p' | sed 's/-/./g'`$
+    -   107     else$
+    -   108     ^IIP=`ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`$
+    -   109     fi$
+    +   106     ^I   107        IP=`echo $EC2 | sed -rn 's/ec2-(.*?)\.compute.*/\1/p' | sed 's/-/./g'`$
+    +   108     else$
+    +   109     ^I   110        IP=`ifconfig eth0 | grep 'inet addr:' | cut -d: -f2 | awk '{ print $1}'`$
+    +   111     fi$
+
+    After fixing the issues found, tester.sh gave successfull results for all option
+    combinations. See log below.
+    
+
+    ====================================================
+     Comparing own version of cat with system's cat
+    ====================================================
+    Comparing: ./cat  /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file1 
+    Result: Successfull!
+    Comparing: ./cat  /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file2 
+    Result: Successfull!
+    Comparing: ./cat  /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file3 
+    Result: Successfull!
+    Comparing: ./cat  /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file4 
+    Result: Successfull!
+    Comparing: ./cat  /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file5 
+    Result: Successfull!
+    Comparing: ./cat -n /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file1 
+    Result: Successfull!
+    Comparing: ./cat -n /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file2 
+    Result: Successfull!
+    Comparing: ./cat -n /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file3 
+    Result: Successfull!
+
+    ... (continues)
+
+    Result: Successfull!
+    Comparing: ./cat -nEbsvt /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file3 
+    Result: Successfull!
+    Comparing: ./cat -nEbsvt /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file4 
+    Result: Successfull!
+    Comparing: ./cat -nEbsvt /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file5 
+    Result: Successfull!
+    Comparing: ./cat -nEbsve /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file1 
+    Result: Successfull!
+    Comparing: ./cat -nEbsve /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file2 
+    Result: Successfull!
+    Comparing: ./cat -nEbsve /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file3 
+    Result: Successfull!
+    Comparing: ./cat -nEbsve /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file4 
+    Result: Successfull!
+    Comparing: ./cat -nEbsve /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file5 
+    Result: Successfull!
+    Comparing: ./cat -nEbsvte /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file1 
+    Result: Successfull!
+    Comparing: ./cat -nEbsvte /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file2 
+    Result: Successfull!
+    Comparing: ./cat -nEbsvte /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file3 
+    Result: Successfull!
+    Comparing: ./cat -nEbsvte /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file4 
+    Result: Successfull!
+    Comparing: ./cat -nEbsvte /home/gonzalo/Documents/cprojects/assignment1/tests/testing-files/file5 
+    Result: Successfull!
+
+
+    Testing cat with multiple files
+    -------------------------------
+    
+    Cat performs the concatenation of the files as expected  for all option combinations.
+
+    $ ./cat -nEbsvte tests/testing-files/file4 tests/testing-files/file5
+    1	THIS IS THE FIRST LINE OF   file4$
+    2	The Linux kernel is a Unix-like computer operating system kernel.$
+    3	The Linux kernel is a widely used operating system kernel world-wide;$
+    4	the Linux operating system is based on it and deployed on both$
+    5	traditional computer systems, usually in the form of Linux distributions$
+    6	, and on embedded devices such as routers. The Android operating system $
+    7	for tablet computers and smartphones is also based atop the Linux kernel.$
+    8	THIS IS THE LAST LINE OF    file4$
+    1	THIS IS THE FIRST LINE OF^Ifile5$
+    2	FreeBSD is a free Unix-like operating system descended from Research$
+    3	Unix via the Berkeley Software Distribution (BSD). Although for legal$
+    4	reasons FreeBSD cannot use the Unix trademark, it is a direct descendant$
+    5	of BSD, which was historically also called "BSD Unix" or "Berkeley Unix.$
+    6	THIS IS THE LAST LINE OF^Ifile5$
+
+    Testing cat with data taken from the stdin
+    ------------------------------------------
+    
+    $ ./cat -b (It only prints line number when non-blank line is found)
+
+    abcde
+         1	abcde
+
+
+    12345
+         2	12345
+
+
+    xyz
+         3	xyz
+
+    $ ./cat -n (This does not happen with the option -n)
+    abcd
+         1	abcd
+
+         2	
+
+         3	
+    xyz
+         4	xyz
+
+         5	
+
+         6	
+    12345
+         7	12345
+
+    $ ./cat -s (Prints just the first non-blank line and avoids printing adjacent blank lines)
+
+    $ ./cat -v (Prints ctrl characters avoiding TAB which would be Ctrl-Y)
+    ^A^M
+    ^A^M
+    ^A^B^X
+    ^A^B^X
+                    ^A^B
+                    ^A^B
+
+    $ ./cat -t (Same inputs as used before, but TABs are printed as ^I)
+    ^A^M
+    ^A^M
+    ^A^B^X
+    ^A^B^X
+                    ^A^B
+    ^I^I^A^B
+
+    $ ./cat -e (Combines the effects of E and v)
+    ^A^A^A123
+    ^A^A^A123$
+                    abcd
+                    abcd$
+    bfcd
+    bfcd$
