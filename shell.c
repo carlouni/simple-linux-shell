@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 /* definition of functions */
 static char *read_line(char *line, int buffer);
 char ** parse_args();
+void my_system(char *command);
 
 /* List of commands allowed to the client */
 char *cmd[1] = { "exit" };
@@ -19,7 +21,7 @@ char line[200];
  */
 int main(void)
 {   
-    char **margv;  
+      
     int l;
     
     while(1) {
@@ -41,17 +43,46 @@ int main(void)
             break;
         }
         
-        /* Parsing line to get the command and args entered */
-        margv = parse_args();
-        
-        /* Exits if line is equal to exit */
-        if(strcmp(margv[0], cmd[0]) == 0)
-            break;
-        
-        /* Executes arbitrary commands using the system function */
-         system(line);
+        /* Executes command read from the terminal */
+        my_system(line);
     }
     return EXIT_SUCCESS;
+}
+
+void my_system(char *command) {
+    char **margv;
+    int cpid;
+    int cstatus;
+    pid_t tpid;
+    
+    /* Parsing line to get the command and args entered */
+    margv = parse_args(command);
+    
+    /* Exits if line is equal to exit */
+    if(strcmp(margv[0], cmd[0]) == 0)
+        exit(EXIT_SUCCESS);
+
+    /* Creates a child process to execute command */
+    cpid = fork();
+    
+    /* If process is a child */
+    if(cpid == 0) {
+        execvp(margv[0], &margv[0]);
+        
+        /* If it continues, that means failure*/
+        printf("Unknown command\n");
+        exit(EXIT_SUCCESS);
+    } else {
+        
+        /* Parent waits for child to finish */
+        do {
+            tpid = wait(&cstatus);
+            
+            /* If process finishes faster than expected */
+            if(tpid != cpid)
+                break;
+        } while(tpid != cpid);
+    }
 }
 
 /**
@@ -73,7 +104,7 @@ static char *read_line(char *line, int buffer)
  * 
  * @return 
  */
-char ** parse_args() {
+char ** parse_args(char *command) {
     static char *rargv[20];
     char **argp;
     const char *delim;
@@ -83,7 +114,7 @@ char ** parse_args() {
     delim = " ";
     
     /* Creates a copy of the read line */
-    strcpy(tmpline, line);
+    strcpy(tmpline, command);
     
     argp = rargv;
     
@@ -94,7 +125,7 @@ char ** parse_args() {
     while( *argp != NULL ) 
     {
         argp++;
-        *argp = strtok(NULL, tmpline);
+        *argp = strtok(NULL, delim);
     }
     return rargv;
 }
