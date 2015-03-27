@@ -11,6 +11,12 @@ Assignment 1
 
 ### Running the programs:
 
+    shell:
+    -----
+    1.- $ ./shell
+        CLI>
+    2.- execute arbitrary commands as it were a normal shell client.
+
     cat:
     ---
     1.- $ ./cat [OPTION]... [FILE]...
