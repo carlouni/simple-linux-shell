@@ -2,13 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 /* definition of functions */
 static char *read_line(char *line, int buffer);
 char ** parse_args();
-void my_system(char *command);
+int my_system(const char *command);
 
-/* List of commands allowed to the client */
+/* List of extra commands for the mini shell */
 char *cmd[1] = { "exit" };
 
 /* line to be read from the stdin */
@@ -21,9 +22,12 @@ char line[200];
  */
 int main(void)
 {   
-      
     int l;
+    int resp;
     
+    /* Ignore child signals */
+    signal(SIGCHLD, SIG_IGN);
+        
     while(1) {
         if (!read_line(line, sizeof(line)))
             break;
@@ -38,50 +42,71 @@ int main(void)
             line[l] = '\0';
         } else if (l == sizeof(line) - 2) {
             
-            /* Prints error if command line is longer that 200 characters */
+            /* Prints error if command line is longer that buffer characters */
             fprintf(stderr, "Command line is too long.\n");
             break;
-        }
+        }   
         
         /* Executes command read from the terminal */
-        my_system(line);
+        resp = 0;
+        resp = my_system(line);
     }
     return EXIT_SUCCESS;
 }
 
-void my_system(char *command) {
+int my_system(const char *command) {
+    char *tmpcmd;
+    int l;
     char **margv;
-    int cpid;
+    int flag_amp = 0;
+    pid_t cpid;
     int cstatus;
-    pid_t tpid;
+    int wait_opt;
     
+    /* creates a copy of the command */
+    tmpcmd = strdup(command);
+    l = strlen(tmpcmd);
+    
+    /* Verifies if last parameter is an & */
+    if (tmpcmd[l - 1] == '&') {
+        flag_amp = 1;
+        tmpcmd[l - 1] = '\0';
+    }
+
     /* Parsing line to get the command and args entered */
-    margv = parse_args(command);
+    margv = parse_args(tmpcmd);
     
-    /* Exits if line is equal to exit */
+    /* Exits if command line is equal to exit */
     if(strcmp(margv[0], cmd[0]) == 0)
         exit(EXIT_SUCCESS);
 
     /* Creates a child process to execute command */
     cpid = fork();
-    
-    /* If process is a child */
-    if(cpid == 0) {
+    if(cpid == -1) {
+        return -1;
+    } else if(cpid == 0) {
+        
+        /* If process is a child */
         execvp(margv[0], &margv[0]);
         
-        /* If it continues, that means failure*/
-        printf("Unknown command\n");
-        exit(EXIT_SUCCESS);
-    } else {
+        /* If it continues, that means failure */
+        fprintf(stderr, "%s: command not found\n", margv[0]);
+        exit(EXIT_FAILURE);
+    } else if(cpid > 0) {
         
-        /* Parent waits for child to finish */
-        do {
-            tpid = wait(&cstatus);
+        /* Default: shell waits for children. */
+        wait_opt = 0;
+        
+        /* If &, shell continues. */
+        if (flag_amp) 
+            wait_opt = WNOHANG;
             
-            /* If process finishes faster than expected */
-            if(tpid != cpid)
-                break;
-        } while(tpid != cpid);
+        /* Parent does not wait for child to finish */
+        if (waitpid(cpid, &cstatus, wait_opt) == -1)
+            return -1;
+        else if (WIFEXITED(cstatus)) 
+            return WEXITSTATUS(cstatus); 
+        return -1;
     }
 }
 
@@ -107,20 +132,17 @@ static char *read_line(char *line, int buffer)
 char ** parse_args(char *command) {
     static char *rargv[20];
     char **argp;
-    const char *delim;
-    char tmpline[sizeof(line)];
-    
-    /* defines the delimiter for arguments */
-    delim = " ";
+    const char delim[] = " ";
+    char *tmpline;
     
     /* Creates a copy of the read line */
-    strcpy(tmpline, command);
+    tmpline = strdup(command);
     
     argp = rargv;
     
     /* get the first token */
     *argp = strtok(tmpline, delim);
-   
+       
     /* walk through other tokens */
     while( *argp != NULL ) 
     {
