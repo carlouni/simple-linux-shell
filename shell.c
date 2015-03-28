@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <sys/wait.h>
 
 /* definition of functions */
@@ -9,28 +10,27 @@ static char *read_line(char *line, int buffer);
 char ** parse_args();
 int my_system(const char *command);
 
-/* List of extra commands for the mini shell */
+extern int errno;
+
+/* List of extra commands for the mini-shell */
 char *cmd[1] = { "exit" };
 
 /* line to be read from the stdin */
 char line[200];
 
 /**
- * Initialize command line client
+ * Main function of the mini-shell.
  * 
  * @return int
  */
 int main(void)
 {   
     int l;
-    int resp;
-    
-    /* Ignore child signals */
-    signal(SIGCHLD, SIG_IGN);
-        
-    while(1) {
-        if (!read_line(line, sizeof(line)))
+    while (1) {
+        if (read_line(line, sizeof(line)) == NULL) {
+            fprintf(stderr, "Unexpected error while reading command.\n");
             break;
+        }  
         
         /* Cleaning up break line from the input*/
         l = strlen(line);
@@ -44,21 +44,28 @@ int main(void)
             
             /* Prints error if command line is longer that buffer characters */
             fprintf(stderr, "Command line is too long.\n");
-            break;
+            continue;
         }   
         
         /* Executes command read from the terminal */
-        resp = 0;
-        resp = my_system(line);
+        if(my_system(line) == -1)
+            fprintf(stderr, "Unexpected error while executing command.\n");
     }
     return EXIT_SUCCESS;
 }
 
-int my_system(const char *command) {
+/**
+ * Imitates the C library's system function behaviour using the execvp function.
+ * 
+ * @param command
+ * @return 
+ */
+int my_system(const char *command)
+{
     char *tmpcmd;
     int l;
     char **margv;
-    int flag_amp = 0;
+    int amp = 0; // Flag ampersand
     pid_t cpid;
     int cstatus;
     int wait_opt;
@@ -69,49 +76,55 @@ int my_system(const char *command) {
     
     /* Verifies if last parameter is an & */
     if (tmpcmd[l - 1] == '&') {
-        flag_amp = 1;
         tmpcmd[l - 1] = '\0';
+        amp = 1;
     }
 
     /* Parsing line to get the command and args entered */
     margv = parse_args(tmpcmd);
     
     /* Exits if command line is equal to exit */
-    if(strcmp(margv[0], cmd[0]) == 0)
+    if (strcmp(margv[0], cmd[0]) == 0)
         exit(EXIT_SUCCESS);
 
     /* Creates a child process to execute command */
     cpid = fork();
-    if(cpid == -1) {
+    if (cpid == -1) {
         return -1;
     } else if(cpid == 0) {
         
         /* If process is a child */
+        errno = 0;
         execvp(margv[0], &margv[0]);
-        
-        /* If it continues, that means failure */
-        fprintf(stderr, "%s: command not found\n", margv[0]);
+        if (errno == ENOENT)
+            fprintf(stderr, "%s: command not found\n", margv[0]);
+        else
+            fprintf(stderr, "Unexpected error while executing command.\n");
         exit(EXIT_FAILURE);
-    } else if(cpid > 0) {
+    } else if (cpid > 0) {
         
         /* Default: shell waits for children. */
         wait_opt = 0;
         
         /* If &, shell continues. */
-        if (flag_amp) 
+        if (amp) 
             wait_opt = WNOHANG;
             
-        /* Parent does not wait for child to finish */
         if (waitpid(cpid, &cstatus, wait_opt) == -1)
             return -1;
         else if (WIFEXITED(cstatus)) 
-            return WEXITSTATUS(cstatus); 
+            return WEXITSTATUS(cstatus);
+        
+        /* If child process is running on background means cstatus >= 0 */
+        if (amp && &cstatus != NULL && cstatus >= 0)
+            return 0;
+        
         return -1;
     }
 }
 
 /**
- * It reads a line from the stdin.
+ * Read command input from stdin
  * 
  * @param line
  * @param buffer
@@ -125,11 +138,13 @@ static char *read_line(char *line, int buffer)
 }
 
 /**
- * Parses line entered into an array.
+ * Parse command string into an array.
  * 
+ * @param command
  * @return 
  */
-char ** parse_args(char *command) {
+char ** parse_args(char *command)
+{
     static char *rargv[20];
     char **argp;
     const char delim[] = " ";
@@ -137,15 +152,14 @@ char ** parse_args(char *command) {
     
     /* Creates a copy of the read line */
     tmpline = strdup(command);
-    
+
     argp = rargv;
-    
+
     /* get the first token */
     *argp = strtok(tmpline, delim);
        
     /* walk through other tokens */
-    while( *argp != NULL ) 
-    {
+    while (*argp != NULL) {
         argp++;
         *argp = strtok(NULL, delim);
     }
