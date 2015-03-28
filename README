@@ -13,9 +13,28 @@ Assignment 1
 
     shell:
     -----
+
+    DESCRIPTION:
+
+    Executes arbitrary commands introduced through the shell. It was implemented
+    using the function execvp.
+
+    USAGE:
     1.- $ ./shell
         CLI>
     2.- execute arbitrary commands as it were a normal shell client.
+
+    LABORATORY NOTES:
+    While executing the mini-shell in the laboratory session, it was noticed that
+    when executing a command with the system function, the mini-shell will continue
+    to run normally. However, when executing a command with execvp the mini-shell
+    will finish abruptly after the command has been executed.
+
+    The reason for this difference is that execvp replaces completely the running
+    program that called the function with the new program that starts executing.
+    On the other hand, instead of replacing the running program, the system()
+    function creates the new process to run independently and waits until it finishes
+    to send a response to the original process.
 
     cat:
     ---
