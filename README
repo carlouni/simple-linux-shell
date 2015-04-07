@@ -25,6 +25,17 @@ Assignment 1
     2.- execute arbitrary commands as it were a normal shell client.
 
     LABORATORY NOTES:
+
+    Implementation of 'cd' command:
+    ------------------------------
+    Due to the fact that execvp executes binary files and cd is not an binary
+    executable file; and that directory changes in child process does not affect
+    the directory of the parent process. Neither system() nor execvp() will be
+    useful to implement the cd command for the mini-shell. Instead, the 'cd'
+    command will be implemented using the chdir() function.
+
+    Differences between the system() and execvp() functions:
+    -------------------------------------------------------
     While executing the mini-shell in the laboratory session, it was noticed that
     when executing a command with the system function, the mini-shell will continue
     to run normally. However, when executing a command with execvp the mini-shell
