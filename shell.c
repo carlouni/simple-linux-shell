@@ -97,7 +97,9 @@ int my_system(const char *command)
     static char *tmp_argv[20];
     char **tmp_argp;
     const char *ofile;
+    const char *ifile;
     int redout = 0;
+    int redin = 0;
     char *d = ">";
     
     memset(&tmp_argv[0], 0, sizeof(tmp_argv));
@@ -161,6 +163,13 @@ int my_system(const char *command)
             break;
         }
         
+        if (!strcmp(margv[i], "<")) {
+            ifile= strdup(margv[i + 1]);
+            redin = 1;
+            *tmp_argp = NULL;
+            break;
+        }
+        
         *tmp_argp = margv[i];
         tmp_argp++;
         i++;
@@ -179,7 +188,13 @@ int my_system(const char *command)
         
 
         FILE *fp;
-        fp = freopen(ofile, "w+", stdout);
+        if (redout) {
+            fp = freopen(ofile, "w+", stdout);
+        }
+        
+        if (redin) {
+            fp = freopen(ifile, "r", stdin);
+        }
 
         
         errno = 0;
