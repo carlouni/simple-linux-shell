@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <sys/wait.h>
+#include <string.h>
 
 /* definition of functions */
 static char *read_line(char *line, int buffer);
@@ -92,6 +93,14 @@ int my_system(const char *command)
     int cstatus;
     int wait_opt;
     struct cmd *c;
+    int i;
+    static char *tmp_argv[20];
+    char **tmp_argp;
+    const char *ofile;
+    int redout = 0;
+    char *d = ">";
+    
+    memset(&tmp_argv[0], 0, sizeof(tmp_argv));
     
     /* creates a copy of the command */
     tmpcmd = strdup(command);
@@ -131,7 +140,34 @@ int my_system(const char *command)
             return 0;
         }
     }
+    
+    i = 0;
+    
+/*
+    fprintf(stdout, "arrives: %s", margv[0]);
+    fprintf(stdout, "comparing: %d", strcmp(margv[0], d));
+    fprintf(stderr, "cat: %s\n", strerror( errno ));
+*/
+    
+    tmp_argp = tmp_argv;
+    while (margv[i] != NULL) {
+        // fprintf(stdout, "fiel: %s", margv[i]);
+        if (!strcmp(margv[i], ">")) {
+            ofile= strdup(margv[i + 1]);
+           // fprintf(stdout, "file: %s", ofile);
+            //tmp_argp++;
+            redout = 1;
+            *tmp_argp = NULL;
+            break;
+        }
+        
+        *tmp_argp = margv[i];
+        tmp_argp++;
+        i++;
+    }
 
+    *tmp_argp = NULL;
+    
     /* Creates a child process to execute command */
     cpid = fork();
     if (cpid == -1) {
@@ -139,8 +175,16 @@ int my_system(const char *command)
     } else if(cpid == 0) {
         
         /* If process is a child */
+        
+        
+
+        FILE *fp;
+        fp = freopen(ofile, "w+", stdout);
+
+        
         errno = 0;
-        execvp(margv[0], &margv[0]);
+        execvp(tmp_argv[0], &tmp_argv[0]);
+        
         if (errno == ENOENT)
             fprintf(stderr, "%s: command not found\n", margv[0]);
         else
