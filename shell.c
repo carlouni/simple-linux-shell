@@ -7,15 +7,15 @@
 #include <string.h>
 
 /* definition of functions */
-static char *read_line(char *line, int buffer);
 char ** parse_args();
 int my_system(const char *command);
+static char *read_line(char *line, int buffer);
 
 /* list of variables and functions to keep track of child processes */
-int find_asc_proc(int pid);
-int add_asc_proc(int pid);
-int asc_procs[100] = {0};
-int pos_asc_proc = 0;
+int find_chld_proc(int pid);
+int add_chld_proc(int pid);
+int async_chld_procs[100] = {0}; // list of asyncronous child processes' IDs
+int pos_asc_proc = 0; // position of last child process's ID in async_chld_procs
 
 /* List of function that handle custom commands in the mini-shell */
 void exit_(void);
@@ -62,11 +62,10 @@ void track_child_process(int signal_number)
     
      /* Store its exit status in a global variable.*/
     child_exit_status = status;
-    
-    int pos = find_asc_proc(pid);
-    if (WIFEXITED ( status ) && pos >= 0)
+    int pos = find_chld_proc(pid);
+    if (WIFEXITED(status) && pos >= 0)
         fprintf(stdout, "[%d] %d Done\n", (pos + 1), pid);
-    else if ( WIFSIGNALED ( status ) && pos >= 0)
+    else if (WIFSIGNALED(status) && pos >= 0)
         fprintf(stdout, "[%d] %d Done\n", (pos + 1), pid);
 }
 
@@ -79,7 +78,7 @@ int main(void)
 {   
     int l;
     
-    /* Handles SIGCHLD by calling clean_up_child_process. */
+    /* Handles SIGCHLD by calling track_child_process. */
     struct sigaction sigchld_action;
     memset (&sigchld_action, 0, sizeof (sigchld_action));
     sigchld_action.sa_handler = &track_child_process;
@@ -121,21 +120,21 @@ int main(void)
 int my_system(const char *command)
 {
     char *tmpcmd;
-    int l;
     char **margv;
+    static char *tmp_argv[20];
+    char **tmp_argp;
+    int l;
+    struct cmd *c;
     int amp = 0; // Flag ampersand
     pid_t cpid;
     int cstatus;
     int wait_opt;
-    struct cmd *c;
-    int i;
-    static char *tmp_argv[20];
-    char **tmp_argp;
     const char *ofile;
     const char *ifile;
-    int redout = 0;
-    int redin = 0;
+    int redout = 0; // flag to redirect stdout to a file
+    int redin = 0; // flag to use a file instead of stdin
     FILE *fp;
+    int i;
     
     memset(&tmp_argv[0], 0, sizeof(tmp_argv));
     
@@ -167,7 +166,6 @@ int my_system(const char *command)
     }
     
     i = 0;
-    
     tmp_argp = tmp_argv;
     while (1) {
         if (margv[i] == NULL || !strcmp(margv[i],"\0") || !strcmp(margv[i], ";")) {
@@ -179,11 +177,12 @@ int my_system(const char *command)
                 return -1;
             } else if(cpid == 0) {
 
-                /* If process is a child */
+                /* CHILD PROCESS */
+                
                 if (redout) {
                     fp = freopen(ofile, "w+", stdout);
                 }
-
+                
                 if (redin) {
                     fp = freopen(ifile, "r", stdin);
                 }
@@ -230,8 +229,7 @@ int my_system(const char *command)
                 /* If child process is running on background means cstatus >= 0 */
                 if (amp && &cstatus != NULL && cstatus >= 0) {
                     memset(&tmp_argv[0], 0, sizeof(tmp_argv));
-                    
-                    int pos = add_asc_proc(cpid);
+                    int pos = add_chld_proc(cpid);
                     fprintf(stdout, "[%d] %d\n", (pos + 1), cpid);
                     return 0;
                 }
@@ -239,6 +237,7 @@ int my_system(const char *command)
             }
         }
         
+        /* if argument is ">", activate redout flag */
         if (!strcmp(margv[i], ">")) {
             ofile= strdup(margv[i + 1]);
             redout = 1;
@@ -247,6 +246,7 @@ int my_system(const char *command)
             continue;
         }
         
+        /* if argument is "<", activate redin flag */
         if (!strcmp(margv[i], "<")) {
             ifile= strdup(margv[i + 1]);
             redin = 1;
@@ -257,9 +257,8 @@ int my_system(const char *command)
         
         /* Verifies if last parameter is an & */
         amp = 0;
-        if (!strcmp(margv[i], "&") && (margv[i + 1] == NULL || !strcmp(margv[i + 1],"\0") || !strcmp(margv[i + 1], ";"))) {
+        if (!strcmp(margv[i], "&") && (margv[i + 1] == NULL || !strcmp(margv[i + 1],"\0") || !strcmp(margv[i + 1], ";")))
             amp = 1;
-        }
         
         if (amp) 
             *tmp_argp = '\0';
@@ -294,8 +293,6 @@ char ** parse_args(char *command)
 {
     static char *rargv[200];
     char **argp;
-    argp = rargv;
-    
     char word[200];
     char *p;
     char *pword;
@@ -305,13 +302,10 @@ char ** parse_args(char *command)
     
     pword = word;
     argp = rargv;
-  
     p = strdup(command);
     int i = 0;
     int l = sizeof(line);
-    
     while ( i < l) {
-        
         switch(*p) {
             case ' ' :
                 if (any(prev, " ;<>&"))
@@ -342,7 +336,6 @@ char ** parse_args(char *command)
                 *argp = ">";
                 argp++;
                 break;
-                
             case '<' :
                 if (!any(prev, " ;<>&")) {
                     *argp = strdup(word);
@@ -374,10 +367,9 @@ char ** parse_args(char *command)
         p++;
         i++;
     }
-    if (pword > word){
+    if (pword > word) {
        *argp = strdup(word);
     }
-    
     return rargv;
 }
 
@@ -427,28 +419,32 @@ void exit_(void)
 
 /**
  * Executes directory change for the shell
+ * 
  * @type command handler
  * @param path
  */
 void cd(const char *path)
 {
     // executes chdir
+    errno = 0;
     chdir(path);
+    if (errno)
+        fprintf(stderr, "shell: cd: %s: %s\n", path, strerror(errno));
 }
 
 /**
- * Checks if child process identified by pid is in the list of asyncronous
- * processes.
+ * Searches child process's id in the list of asyncronous child processes. Returns
+ * the position of the process id in the list. if not found, returns -1.
  * 
  * @param pid
  * @return 
  */
-int find_asc_proc(int pid)
+int find_chld_proc(int pid)
 {
     int i = 0;
-    int l = sizeof(asc_procs);
+    int l = sizeof(async_chld_procs);
     while(i < l){
-        if (asc_procs[i] == pid)
+        if (async_chld_procs[i] == pid)
             return i;
         i++;
     }
@@ -456,16 +452,16 @@ int find_asc_proc(int pid)
 }
 
 /**
- * Adds asyncronous child process's id to the list of asyncronous processes.
+ * Adds child process's id to the list of asyncronous child processes.
  *  
  * @param pid
  * @return 
  */
-int add_asc_proc(int pid)
+int add_chld_proc(int pid)
 {
-    asc_procs[pos_asc_proc] = pid;
+    async_chld_procs[pos_asc_proc] = pid;
     pos_asc_proc++;
-    if (pos_asc_proc < sizeof(asc_procs))
+    if (pos_asc_proc < sizeof(async_chld_procs))
         return (pos_asc_proc -1);
     else
         pos_asc_proc = 0;
