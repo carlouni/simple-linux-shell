@@ -11,12 +11,16 @@ static char *read_line(char *line, int buffer);
 char ** parse_args();
 int my_system(const char *command);
 
+/* list of variables and functions to keep track of child processes */
+int find_asc_proc(int pid);
+int add_asc_proc(int pid);
+int asc_procs[100] = {0};
+int pos_asc_proc = 0;
+
+/* List of function that handle custom commands in the mini-shell */
 void exit_(void);
 void cd(const char *path);
-
 struct cmd *getcmd(const char *name);
-
-extern int errno;
 
 /* table structure for extra commands on the mini-shell */
 struct cmd {
@@ -38,8 +42,33 @@ struct cmd cmdtab[] = {
     { 0, 0, 0, 0 }
 };
 
+extern int errno;
+
 /* line to be read from the stdin */
 char line[200];
+
+sig_atomic_t child_exit_status;
+
+/**
+ * Tracks child processes.
+ * 
+ * @param signal_number
+ */
+void track_child_process(int signal_number)
+{
+    /* Clean up the child process. */
+    int status;
+    int pid = wait(&status);
+    
+     /* Store its exit status in a global variable.*/
+    child_exit_status = status;
+    
+    int pos = find_asc_proc(pid);
+    if (WIFEXITED ( status ) && pos >= 0)
+        fprintf(stdout, "[%d] %d Done\n", (pos + 1), pid);
+    else if ( WIFSIGNALED ( status ) && pos >= 0)
+        fprintf(stdout, "[%d] %d Done\n", (pos + 1), pid);
+}
 
 /**
  * Main function of the mini-shell.
@@ -49,10 +78,16 @@ char line[200];
 int main(void)
 {   
     int l;
+    
+    /* Handles SIGCHLD by calling clean_up_child_process. */
+    struct sigaction sigchld_action;
+    memset (&sigchld_action, 0, sizeof (sigchld_action));
+    sigchld_action.sa_handler = &track_child_process;
+    sigaction (SIGCHLD, &sigchld_action, NULL);
+    
     while (1) {
         if (read_line(line, sizeof(line)) == NULL) {
-            fprintf(stderr, "Unexpected error while reading command.\n");
-            break;
+            continue;
         }  
         
         /* Cleaning up break line from the input*/
@@ -100,7 +135,6 @@ int my_system(const char *command)
     const char *ifile;
     int redout = 0;
     int redin = 0;
-    char *d = ">";
     FILE *fp;
     
     memset(&tmp_argv[0], 0, sizeof(tmp_argv));
@@ -108,12 +142,6 @@ int my_system(const char *command)
     /* creates a copy of the command */
     tmpcmd = strdup(command);
     l = strlen(tmpcmd);
-    
-    /* Verifies if last parameter is an & */
-    if (tmpcmd[l - 1] == '&') {
-        tmpcmd[l - 1] = '\0';
-        amp = 1;
-    }
 
     /* Parsing line to get the command and args entered */
     margv = parse_args(tmpcmd);
@@ -142,7 +170,8 @@ int my_system(const char *command)
     
     tmp_argp = tmp_argv;
     while (1) {
-        if (margv[i] == NULL || !strcmp(margv[i], ";")) {
+        if (margv[i] == NULL || !strcmp(margv[i],"\0") || !strcmp(margv[i], ";")) {
+            cstatus = 0;
             
             /* Creates a child process to execute command */
             cpid = fork();
@@ -199,9 +228,13 @@ int my_system(const char *command)
                 }
 
                 /* If child process is running on background means cstatus >= 0 */
-                if (amp && &cstatus != NULL && cstatus >= 0)
+                if (amp && &cstatus != NULL && cstatus >= 0) {
+                    memset(&tmp_argv[0], 0, sizeof(tmp_argv));
+                    
+                    int pos = add_asc_proc(cpid);
+                    fprintf(stdout, "[%d] %d\n", (pos + 1), cpid);
                     return 0;
-
+                }
                 return -1;
             }
         }
@@ -222,7 +255,16 @@ int my_system(const char *command)
             continue;
         }
         
-        *tmp_argp = strdup(margv[i]);
+        /* Verifies if last parameter is an & */
+        amp = 0;
+        if (!strcmp(margv[i], "&") && (margv[i + 1] == NULL || !strcmp(margv[i + 1],"\0") || !strcmp(margv[i + 1], ";"))) {
+            amp = 1;
+        }
+        
+        if (amp) 
+            *tmp_argp = '\0';
+        else
+            *tmp_argp = strdup(margv[i]);
         tmp_argp++;
         i++;
     }
@@ -266,14 +308,13 @@ char ** parse_args(char *command)
   
     p = strdup(command);
     int i = 0;
-    int j = 0;
     int l = sizeof(line);
     
     while ( i < l) {
         
         switch(*p) {
             case ' ' :
-                if (any(prev, " ;<>"))
+                if (any(prev, " ;<>&"))
                     break;
                 *argp = strdup(word);
                 argp++;
@@ -282,7 +323,7 @@ char ** parse_args(char *command)
                 
                 break;
             case ';' :
-                if (!any(prev, " ;<>")) {
+                if (!any(prev, " ;<>&")) {
                     *argp = strdup(word);
                     argp++;
                     memset(&word, 0, sizeof(word));
@@ -292,7 +333,7 @@ char ** parse_args(char *command)
                 argp++;
                 break;
             case '>' :
-                if (!any(prev, " ;<>")) {
+                if (!any(prev, " ;<>&")) {
                     *argp = strdup(word);
                     argp++;
                     memset(&word, 0, sizeof(word));
@@ -303,13 +344,23 @@ char ** parse_args(char *command)
                 break;
                 
             case '<' :
-                if (!any(prev, " ;<>")) {
+                if (!any(prev, " ;<>&")) {
                     *argp = strdup(word);
                     argp++;
                     memset(&word, 0, sizeof(word));
                     pword = word;
                 }
                 *argp = "<";
+                argp++;
+                break;
+            case '&' :
+                if (!any(prev, " ;<>&")) {
+                    *argp = strdup(word);
+                    argp++;
+                    memset(&word, 0, sizeof(word));
+                    pword = word;
+                }
+                *argp = "&";
                 argp++;
                 break;
             case '"' :
@@ -340,7 +391,6 @@ char ** parse_args(char *command)
 int any(int c, char *as)
 {
     register char *s;
-    
     s = as;
     while(*s)
         if(*s++ == c)
@@ -384,4 +434,40 @@ void cd(const char *path)
 {
     // executes chdir
     chdir(path);
+}
+
+/**
+ * Checks if child process identified by pid is in the list of asyncronous
+ * processes.
+ * 
+ * @param pid
+ * @return 
+ */
+int find_asc_proc(int pid)
+{
+    int i = 0;
+    int l = sizeof(asc_procs);
+    while(i < l){
+        if (asc_procs[i] == pid)
+            return i;
+        i++;
+    }
+    return -1;
+}
+
+/**
+ * Adds asyncronous child process's id to the list of asyncronous processes.
+ *  
+ * @param pid
+ * @return 
+ */
+int add_asc_proc(int pid)
+{
+    asc_procs[pos_asc_proc] = pid;
+    pos_asc_proc++;
+    if (pos_asc_proc < sizeof(asc_procs))
+        return (pos_asc_proc -1);
+    else
+        pos_asc_proc = 0;
+    return (pos_asc_proc -1);
 }
