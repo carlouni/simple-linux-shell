@@ -1,12 +1,17 @@
-Assignment 1
-============
+This is a simplified version of a Linux shell client. Useful to understand how
+the Linux command line is implemented as well as to provide insights on how to implement
+a generic shell client for any application written in C.
+
+This can be compiled on Linux Debian and derivatives. Haven't tried to compile it on
+other distributions but it is compliant with C standards.
+
+Use it under your own risk. Not responsible for any damage or data loss.
 
 ### Building executables on Linux:
 
     1.- Make sure the system has the 'gcc compiler' and 'make'.
     
-    2.- From the Linux terminal execute the following commands:
-        $ cd assignment1
+    2.- From the Linux terminal execute the following commands in the repository's root directory:
         $ make
 
 ### Running the programs:
@@ -23,43 +28,3 @@ Assignment 1
     1.- $ ./shell
         CLI>
     2.- execute arbitrary commands as it were a normal shell client.
-
-    LABORATORY NOTES:
-
-    Implementation of 'cd' command:
-    ------------------------------
-    Due to the fact that execvp executes binary files and cd is not an binary
-    executable file; and that directory changes in child process does not affect
-    the directory of the parent process. Neither system() nor execvp() will be
-    useful to implement the cd command for the mini-shell. Instead, the 'cd'
-    command will be implemented using the chdir() function.
-
-    Differences between the system() and execvp() functions:
-    -------------------------------------------------------
-    While executing the mini-shell in the laboratory session, it was noticed that
-    when executing a command with the system function, the mini-shell will continue
-    to run normally. However, when executing a command with execvp the mini-shell
-    will finish abruptly after the command has been executed.
-
-    The reason for this difference is that execvp replaces completely the running
-    program that called the function with the new program that starts executing.
-    On the other hand, instead of replacing the running program, the system()
-    function creates the new process to run independently and waits until it finishes
-    to send a response to the original process.
-
-    cat:
-    ---
-    1.- $ ./cat [OPTION]... [FILE]...
-    2.- The options available are as follows:
-        -n : prints line number on the left side
-        -E : prints '$' at the end of each line
-
-    Input entered from stdin:
-    1.- If no file is introduced, the data input is taken from the stdin.
-    3.- Program displays data read from stdin and display results based on the
-        above options.
-    4.- Control D to exit.
-
-    hello:
-    ------
-    1.- $ ./hello
